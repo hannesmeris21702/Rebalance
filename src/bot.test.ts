@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadConfig } from './bot.js';
 import { isOutOfRange, selectSingleSidedToken } from './helpers.js';
 
@@ -16,7 +16,7 @@ vi.mock('@cetusprotocol/cetus-sui-clmm-sdk', () => ({
 	},
 }));
 
-const baseEnv = { ...process.env };
+let baseEnv: NodeJS.ProcessEnv;
 const requiredEnv = {
 	SUI_PRIVATE_KEY: 'suiprivkey...',
 	POOL_ID: '0xpoolid',
@@ -31,6 +31,10 @@ const requiredEnv = {
 function setEnv(overrides: Record<string, string | undefined>): void {
 	process.env = { ...baseEnv, ...requiredEnv, ...overrides };
 }
+
+beforeEach(() => {
+	baseEnv = { ...process.env };
+});
 
 afterEach(() => {
 	process.env = { ...baseEnv };

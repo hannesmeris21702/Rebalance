@@ -70,6 +70,10 @@ function validateRpcForNetwork(network: Network, rpcUrl: string): void {
 	} catch {
 		throw new Error(`Invalid SUI_RPC_URL format: ${rpcUrl}`);
 	}
+	if (hostname !== DEFAULT_MAINNET_HOST && hostname !== DEFAULT_TESTNET_HOST) {
+		console.warn(`Skipping RPC/network hostname validation for custom endpoint ${hostname}.`);
+		return;
+	}
 	if (network === 'mainnet' && hostname === DEFAULT_TESTNET_HOST) {
 		throw new Error(`SUI_RPC_URL ${rpcUrl} (host ${hostname}) does not match SUI_NETWORK mainnet.`);
 	}
