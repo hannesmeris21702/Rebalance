@@ -2,7 +2,7 @@
   "name": "rebalance",
   "version": "1.0.0",
   "description": "Cetus SDK-based Sui rebalance bot",
-  "main": "index.js",
+  "main": "dist/bot.js",
   "scripts": {
     "start": "ts-node src/bot.ts",
     "build": "tsc -p .",

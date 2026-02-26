@@ -11,6 +11,7 @@ import {
 	initCetusSDK,
 	Position,
 	Pool,
+	TickMath,
 } from '@cetusprotocol/cetus-sui-clmm-sdk';
 import BN from 'bn.js';
 import { isOutOfRange, selectSingleSidedToken, Side } from './helpers';
@@ -51,7 +52,15 @@ function parseNumberEnv(key: string, fallback: number): number {
 }
 
 function loadConfig(): Config {
-	const network: Network = process.env.SUI_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
+	const requestedNetwork = process.env.SUI_NETWORK;
+	let network: Network = 'testnet';
+	if (requestedNetwork === 'mainnet') {
+		network = 'mainnet';
+	} else if (requestedNetwork === 'testnet' || requestedNetwork === undefined) {
+		network = 'testnet';
+	} else {
+		throw new Error('SUI_NETWORK must be "mainnet" or "testnet" when provided.');
+	}
 	const defaultRpc =
 		network === 'mainnet' ? 'https://fullnode.mainnet.sui.io' : 'https://fullnode.testnet.sui.io';
 	const rpcUrl = process.env.SUI_RPC_URL ?? defaultRpc;
@@ -99,6 +108,49 @@ type BotContext = {
 	address: string;
 };
 
+type StatusLike = { status?: { status?: string } };
+
+function withSafetyMargin(value: BN): string {
+	const safe = value.muln(995).divn(1000);
+	return safe.isZero() ? '0' : safe.toString();
+}
+
+function estimateMinWithdrawAmounts(position: Position, pool: Pool): { minA: string; minB: string } {
+	const liquidity = new BN(position.liquidity);
+	const lowerSqrt = TickMath.tickIndexToSqrtPriceX64(position.tick_lower_index);
+	const upperSqrt = TickMath.tickIndexToSqrtPriceX64(position.tick_upper_index);
+	const currentSqrt = new BN(pool.current_sqrt_price);
+	const { coinA, coinB } = ClmmPoolUtil.getCoinAmountFromLiquidity(
+		liquidity,
+		currentSqrt,
+		lowerSqrt,
+		upperSqrt,
+		false,
+	);
+	return { minA: withSafetyMargin(coinA), minB: withSafetyMargin(coinB) };
+}
+
+function extractExecutionStatus(result: unknown): string {
+	if (typeof result !== 'object' || result === null) {
+		return 'unknown';
+	}
+	const record = result as Record<string, unknown>;
+	const effects = record.effects as StatusLike | undefined;
+	if (effects?.status?.status) {
+		return effects.status.status;
+	}
+	const outcome = record.outcome as StatusLike | undefined;
+	if (outcome?.status?.status) {
+		return outcome.status.status;
+	}
+	const nestedResult = record.result as Record<string, unknown> | undefined;
+	const nestedEffects = nestedResult?.effects as StatusLike | undefined;
+	if (nestedEffects?.status?.status) {
+		return nestedEffects.status.status;
+	}
+	return 'unknown';
+}
+
 async function signAndExecute(
 	client: CetusClmmSDK['fullClient'],
 	keypair: Keypair,
@@ -111,11 +163,7 @@ async function signAndExecute(
 			transaction: tx,
 			client: client as unknown as ClientWithCoreApi,
 		});
-		const status =
-			(result as any).effects?.status?.status ??
-			(result as any).outcome?.status?.status ??
-			(result as any).result?.effects?.status?.status ??
-			'ok';
+		const status = extractExecutionStatus(result);
 		console.log(`${label} success: ${status}`);
 	} catch (error) {
 		const message = (error as Error).message ?? String(error);
@@ -143,6 +191,7 @@ async function removeOutOfRangePositions(context: BotContext, pool: Pool): Promi
 		if (!isOutOfRange(pool.current_tick_index, position.tick_lower_index, position.tick_upper_index)) {
 			continue;
 		}
+		const { minA, minB } = estimateMinWithdrawAmounts(position, pool);
 		console.log(
 			`Position ${position.pos_object_id} out of range; removing liquidity ${position.liquidity} and collecting fees...`,
 		);
@@ -152,8 +201,8 @@ async function removeOutOfRangePositions(context: BotContext, pool: Pool): Promi
 			coinTypeA: pool.coinTypeA,
 			coinTypeB: pool.coinTypeB,
 			delta_liquidity: position.liquidity,
-			min_amount_a: '0',
-			min_amount_b: '0',
+			min_amount_a: minA,
+			min_amount_b: minB,
 			collect_fee: true,
 			rewarder_coin_types: [],
 		});
