@@ -60,7 +60,17 @@ function parseRequiredNumberEnv(key: string): number {
 	return parsed;
 }
 
-function loadConfig(): Config {
+function validateRpcForNetwork(network: Network, rpcUrl: string): void {
+	const normalized = rpcUrl.toLowerCase();
+	if (network === 'mainnet' && normalized.includes('testnet')) {
+		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK mainnet.`);
+	}
+	if (network === 'testnet' && normalized.includes('mainnet')) {
+		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK testnet.`);
+	}
+}
+
+export function loadConfig(): Config {
 	const requestedNetwork = process.env.SUI_NETWORK;
 	let network: Network = 'testnet';
 	if (requestedNetwork === 'mainnet') {
@@ -73,6 +83,7 @@ function loadConfig(): Config {
 	const defaultRpc =
 		network === 'mainnet' ? 'https://fullnode.mainnet.sui.io' : 'https://fullnode.testnet.sui.io';
 	const rpcUrl = process.env.SUI_RPC_URL ?? defaultRpc;
+	validateRpcForNetwork(network, rpcUrl);
 	const poolId = requiredEnv('POOL_ID');
 	const lowerTick = parseRequiredNumberEnv('LOWER_TICK');
 	const upperTick = parseRequiredNumberEnv('UPPER_TICK');
