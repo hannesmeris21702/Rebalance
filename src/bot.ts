@@ -67,9 +67,11 @@ function validateRpcForNetwork(network: Network, rpcUrl: string): void {
 	let hostname: string;
 	try {
 		hostname = new URL(rpcUrl).hostname.toLowerCase();
-	} catch {
-		throw new Error(`Invalid SUI_RPC_URL format: ${rpcUrl}`);
+	} catch (err) {
+		const detail = err instanceof Error ? err.message : String(err);
+		throw new Error(`Invalid SUI_RPC_URL format: ${rpcUrl} - ${detail}`);
 	}
+	// Allow custom RPC providers (e.g., private gateways) without strict hostname checks.
 	if (hostname !== DEFAULT_MAINNET_HOST && hostname !== DEFAULT_TESTNET_HOST) {
 		console.warn(`Skipping RPC/network hostname validation for custom endpoint ${hostname}.`);
 		return;
