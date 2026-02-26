@@ -60,7 +60,35 @@ function parseRequiredNumberEnv(key: string): number {
 	return parsed;
 }
 
-function loadConfig(): Config {
+const DEFAULT_MAINNET_HOST = 'fullnode.mainnet.sui.io';
+const DEFAULT_TESTNET_HOST = 'fullnode.testnet.sui.io';
+
+function validateRpcForNetwork(network: Network, rpcUrl: string): void {
+	let hostname: string;
+	try {
+		hostname = new URL(rpcUrl).hostname.toLowerCase();
+	} catch (err) {
+		const detail = err instanceof Error ? err.message : String(err);
+		throw new Error(`Invalid SUI_RPC_URL format: ${rpcUrl} - ${detail}`);
+	}
+	// Allow custom RPC providers (e.g., private gateways) without strict hostname checks.
+	if (hostname !== DEFAULT_MAINNET_HOST && hostname !== DEFAULT_TESTNET_HOST) {
+		console.warn(
+			'Skipping RPC/network hostname validation for custom endpoint',
+			hostname,
+			'- ensure this endpoint matches your intended network.',
+		);
+		return;
+	}
+	if (network === 'mainnet' && hostname === DEFAULT_TESTNET_HOST) {
+		throw new Error(`SUI_RPC_URL ${rpcUrl} (host ${hostname}) does not match SUI_NETWORK mainnet.`);
+	}
+	if (network === 'testnet' && hostname === DEFAULT_MAINNET_HOST) {
+		throw new Error(`SUI_RPC_URL ${rpcUrl} (host ${hostname}) does not match SUI_NETWORK testnet.`);
+	}
+}
+
+export function loadConfig(): Config {
 	const requestedNetwork = process.env.SUI_NETWORK;
 	let network: Network = 'testnet';
 	if (requestedNetwork === 'mainnet') {
@@ -73,6 +101,7 @@ function loadConfig(): Config {
 	const defaultRpc =
 		network === 'mainnet' ? 'https://fullnode.mainnet.sui.io' : 'https://fullnode.testnet.sui.io';
 	const rpcUrl = process.env.SUI_RPC_URL ?? defaultRpc;
+	validateRpcForNetwork(network, rpcUrl);
 	const poolId = requiredEnv('POOL_ID');
 	const lowerTick = parseRequiredNumberEnv('LOWER_TICK');
 	const upperTick = parseRequiredNumberEnv('UPPER_TICK');
