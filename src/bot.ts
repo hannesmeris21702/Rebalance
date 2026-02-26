@@ -68,13 +68,13 @@ function validateRpcForNetwork(network: Network, rpcUrl: string): void {
 	try {
 		hostname = new URL(rpcUrl).hostname.toLowerCase();
 	} catch {
-		return;
+		throw new Error(`Invalid SUI_RPC_URL format: ${rpcUrl}`);
 	}
 	if (network === 'mainnet' && hostname === DEFAULT_TESTNET_HOST) {
-		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK mainnet.`);
+		throw new Error(`SUI_RPC_URL ${rpcUrl} (host ${hostname}) does not match SUI_NETWORK mainnet.`);
 	}
 	if (network === 'testnet' && hostname === DEFAULT_MAINNET_HOST) {
-		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK testnet.`);
+		throw new Error(`SUI_RPC_URL ${rpcUrl} (host ${hostname}) does not match SUI_NETWORK testnet.`);
 	}
 }
 

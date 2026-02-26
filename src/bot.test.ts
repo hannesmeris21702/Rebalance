@@ -78,4 +78,9 @@ describe('loadConfig network validation', () => {
 		setEnv({ SUI_NETWORK: 'testnet', SUI_RPC_URL: 'https://fullnode.mainnet.sui.io' });
 		expect(() => loadConfig()).toThrow(/SUI_RPC_URL .* does not match SUI_NETWORK testnet/);
 	});
+
+	it('rejects invalid RPC URL format', () => {
+		setEnv({ SUI_RPC_URL: 'not-a-url' });
+		expect(() => loadConfig()).toThrow(/Invalid SUI_RPC_URL format/);
+	});
 });
