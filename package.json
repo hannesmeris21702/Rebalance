@@ -1,0 +1,35 @@
+{
+  "name": "rebalance",
+  "version": "1.0.0",
+  "description": "Cetus SDK-based Sui rebalance bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/bot.ts",
+    "build": "tsc -p .",
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hannesmeris21702/Rebalance.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hannesmeris21702/Rebalance/issues"
+  },
+  "homepage": "https://github.com/hannesmeris21702/Rebalance#readme",
+  "dependencies": {
+    "@cetusprotocol/cetus-sui-clmm-sdk": "^5.4.0",
+    "@mysten/bcs": "^2.0.2",
+    "@mysten/sui": "^2.5.0",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
