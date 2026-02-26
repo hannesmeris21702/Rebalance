@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadConfig } from './bot.js';
 import { isOutOfRange, selectSingleSidedToken } from './helpers.js';
 
+// Mock the SDK to avoid loading native dependencies when importing loadConfig.
 vi.mock('@cetusprotocol/cetus-sui-clmm-sdk', () => ({
 	CetusClmmSDK: class {},
 	ClmmPoolUtil: {
