@@ -16,7 +16,7 @@ vi.mock('@cetusprotocol/cetus-sui-clmm-sdk', () => ({
 	},
 }));
 
-let originalEnv: NodeJS.ProcessEnv;
+let initialProcessEnv: NodeJS.ProcessEnv;
 const requiredEnv = {
 	SUI_PRIVATE_KEY: 'suiprivkey...',
 	POOL_ID: '0xpoolid',
@@ -29,15 +29,15 @@ const requiredEnv = {
 };
 
 function setEnv(overrides: Record<string, string | undefined>): void {
-	process.env = { ...originalEnv, ...requiredEnv, ...overrides };
+	process.env = { ...initialProcessEnv, ...requiredEnv, ...overrides };
 }
 
 beforeEach(() => {
-	originalEnv = { ...process.env };
+	initialProcessEnv = { ...process.env };
 });
 
 afterEach(() => {
-	process.env = { ...originalEnv };
+	process.env = { ...initialProcessEnv };
 });
 
 describe('range helpers', () => {

@@ -73,7 +73,9 @@ function validateRpcForNetwork(network: Network, rpcUrl: string): void {
 	}
 	// Allow custom RPC providers (e.g., private gateways) without strict hostname checks.
 	if (hostname !== DEFAULT_MAINNET_HOST && hostname !== DEFAULT_TESTNET_HOST) {
-		console.warn(`Skipping RPC/network hostname validation for custom endpoint ${hostname}.`);
+		console.warn(
+			`Skipping RPC/network hostname validation for custom endpoint ${hostname}; ensure this endpoint matches your intended network.`,
+		);
 		return;
 	}
 	if (network === 'mainnet' && hostname === DEFAULT_TESTNET_HOST) {
