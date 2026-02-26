@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOutOfRange, selectSingleSidedToken } from './helpers';
+import { isOutOfRange, selectSingleSidedToken } from './helpers.js';
 
 describe('range helpers', () => {
 	it('detects in-range ticks', () => {

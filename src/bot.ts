@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { pathToFileURL } from 'node:url';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { decodeSuiPrivateKey, Keypair } from '@mysten/sui/cryptography';
@@ -14,7 +15,7 @@ import {
 	TickMath,
 } from '@cetusprotocol/cetus-sui-clmm-sdk';
 import BN from 'bn.js';
-import { isOutOfRange, selectSingleSidedToken, Side } from './helpers';
+import { isOutOfRange, selectSingleSidedToken, Side } from './helpers.js';
 
 type Network = 'mainnet' | 'testnet';
 
@@ -31,7 +32,7 @@ type Config = {
 	slippage: number;
 };
 
-const MOVE_ABORT_ZERO = 'MoveAbort(0)';
+const MOVE_ABORT_ZERO_PATTERN = 'MoveAbort(0)';
 
 function requiredEnv(key: string): string {
 	const value = process.env[key];
@@ -45,6 +46,14 @@ function parseNumberEnv(key: string, fallback: number): number {
 	const raw = process.env[key];
 	if (raw === undefined) return fallback;
 	const parsed = Number(raw);
+	if (Number.isNaN(parsed)) {
+		throw new Error(`Invalid number for ${key}`);
+	}
+	return parsed;
+}
+
+function parseRequiredNumberEnv(key: string): number {
+	const parsed = Number(requiredEnv(key));
 	if (Number.isNaN(parsed)) {
 		throw new Error(`Invalid number for ${key}`);
 	}
@@ -65,8 +74,8 @@ function loadConfig(): Config {
 		network === 'mainnet' ? 'https://fullnode.mainnet.sui.io' : 'https://fullnode.testnet.sui.io';
 	const rpcUrl = process.env.SUI_RPC_URL ?? defaultRpc;
 	const poolId = requiredEnv('POOL_ID');
-	const lowerTick = Number(requiredEnv('LOWER_TICK'));
-	const upperTick = Number(requiredEnv('UPPER_TICK'));
+	const lowerTick = parseRequiredNumberEnv('LOWER_TICK');
+	const upperTick = parseRequiredNumberEnv('UPPER_TICK');
 	const checkIntervalMs = parseNumberEnv('CHECK_INTERVAL_SECONDS', 60) * 1000;
 	const zapAmountA = process.env.ZAP_AMOUNT_A ?? '0';
 	const zapAmountB = process.env.ZAP_AMOUNT_B ?? '0';
@@ -110,11 +119,17 @@ type BotContext = {
 
 type StatusLike = { status?: { status?: string } };
 
+/**
+ * Apply a 0.5% safety margin to a BN value to tolerate rounding while keeping limits conservative.
+ */
 function withSafetyMargin(value: BN): string {
 	const safe = value.muln(995).divn(1000);
 	return safe.isZero() ? '0' : safe.toString();
 }
 
+/**
+ * Estimate minimum withdrawal amounts for a position using current pool sqrt price with a safety buffer.
+ */
 function estimateMinWithdrawAmounts(position: Position, pool: Pool): { minA: string; minB: string } {
 	const liquidity = new BN(position.liquidity);
 	const lowerSqrt = TickMath.tickIndexToSqrtPriceX64(position.tick_lower_index);
@@ -130,6 +145,9 @@ function estimateMinWithdrawAmounts(position: Position, pool: Pool): { minA: str
 	return { minA: withSafetyMargin(coinA), minB: withSafetyMargin(coinB) };
 }
 
+/**
+ * Extract an execution status string from a transaction result-like object.
+ */
 function extractExecutionStatus(result: unknown): string {
 	if (typeof result !== 'object' || result === null) {
 		return 'unknown';
@@ -167,7 +185,7 @@ async function signAndExecute(
 		console.log(`${label} success: ${status}`);
 	} catch (error) {
 		const message = (error as Error).message ?? String(error);
-		if (message.includes(MOVE_ABORT_ZERO)) {
+		if (message.includes(MOVE_ABORT_ZERO_PATTERN)) {
 			console.error(`${label} failed with non-retryable MoveAbort(0): ${message}`);
 			return;
 		}
@@ -175,6 +193,9 @@ async function signAndExecute(
 	}
 }
 
+/**
+ * Safely check whether a position currently reports non-zero liquidity.
+ */
 function hasLiquidity(position: Position): boolean {
 	try {
 		return BigInt(position.liquidity) > 0n;
@@ -291,7 +312,7 @@ async function runLoop(context: BotContext): Promise<void> {
 			await addSingleSidedLiquidity(context, pool);
 		} catch (error) {
 			const message = (error as Error).message ?? String(error);
-			if (message.includes(MOVE_ABORT_ZERO)) {
+			if (message.includes(MOVE_ABORT_ZERO_PATTERN)) {
 				console.error(`Encountered non-retryable MoveAbort(0); ${message}`);
 			} else {
 				console.error(`Iteration failed: ${message}`);
@@ -312,7 +333,19 @@ async function main(): Promise<void> {
 	await runLoop({ config, client: sdk.fullClient, sdk, keypair, address });
 }
 
-if (require.main === module) {
+/**
+ * Determine whether this module is the program entrypoint in an ESM-safe way.
+ */
+function isMainModule(): boolean {
+	return (
+		typeof import.meta !== 'undefined' &&
+		typeof process !== 'undefined' &&
+		process.argv[1] !== undefined &&
+		import.meta.url === pathToFileURL(process.argv[1]).href
+	);
+}
+
+if (isMainModule()) {
 	main().catch((error) => {
 		console.error(error);
 		process.exit(1);

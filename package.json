@@ -4,7 +4,7 @@
   "description": "Cetus SDK-based Sui rebalance bot",
   "main": "dist/bot.js",
   "scripts": {
-    "start": "ts-node src/bot.ts",
+    "start": "node --loader ts-node/esm src/bot.ts",
     "build": "tsc -p .",
     "test": "vitest"
   },
@@ -15,7 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/hannesmeris21702/Rebalance/issues"
   },
