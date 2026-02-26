@@ -7,6 +7,7 @@ vi.mock('@cetusprotocol/cetus-sui-clmm-sdk', () => ({
 	CetusClmmSDK: class {},
 	ClmmPoolUtil: {
 		getCoinAmountFromLiquidity: vi.fn(),
+		// Mirror SDK casing (lowercase "coin" is intentional).
 		estLiquidityAndcoinAmountFromOneAmounts: vi.fn(),
 	},
 	initCetusSDK: vi.fn(),
