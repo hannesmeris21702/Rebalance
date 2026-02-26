@@ -60,12 +60,20 @@ function parseRequiredNumberEnv(key: string): number {
 	return parsed;
 }
 
+const DEFAULT_MAINNET_HOST = 'fullnode.mainnet.sui.io';
+const DEFAULT_TESTNET_HOST = 'fullnode.testnet.sui.io';
+
 function validateRpcForNetwork(network: Network, rpcUrl: string): void {
-	const normalized = rpcUrl.toLowerCase();
-	if (network === 'mainnet' && normalized.includes('testnet')) {
+	let hostname: string;
+	try {
+		hostname = new URL(rpcUrl).hostname.toLowerCase();
+	} catch {
+		return;
+	}
+	if (network === 'mainnet' && hostname === DEFAULT_TESTNET_HOST) {
 		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK mainnet.`);
 	}
-	if (network === 'testnet' && normalized.includes('mainnet')) {
+	if (network === 'testnet' && hostname === DEFAULT_MAINNET_HOST) {
 		throw new Error(`SUI_RPC_URL ${rpcUrl} does not match SUI_NETWORK testnet.`);
 	}
 }
